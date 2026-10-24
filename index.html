@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Local Radar Çıktıları</title>
+<style>
+:root{--bg:#f8f9fa;--card:#fff;--ink:#202124;--mut:#5f6368;--line:#dadce0;--primary:#1a73e8}
+@media (prefers-color-scheme:dark){:root{--bg:#202124;--card:#2d2e31;--ink:#e8eaed;--mut:#9aa0a6;--line:#3c4043;--primary:#8ab4f8}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.4}
+.wrap{max-width:640px;margin:0 auto;padding:28px 16px 48px}
+.geri{display:inline-block;color:var(--primary);text-decoration:none;font-size:14px;margin-bottom:8px}
+h1{font-size:28px;font-weight:800;margin:8px 0 4px;letter-spacing:-.02em}
+p.s{color:var(--mut);font-size:14px;margin:0 0 20px}
+a.k{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:10px;color:var(--ink);text-decoration:none;font-weight:600;font-size:17px;overflow-wrap:anywhere}
+a.k small{display:block;color:var(--mut);font-weight:400;font-size:13px;margin-top:2px}
+a.k:hover,a.k:active{border-color:var(--primary)}
+.none{color:var(--mut);font-size:14px}
+</style></head><body><div class="wrap">
+<a class="geri" href="https://cisey.github.io/">← Ana sayfa</a>
+<h1>📡 Local Radar</h1>
+<p class="s">Bölge rehberleri. Birine dokun, açılsın.</p>
+<div id="list"><p class="none">Yükleniyor…</p></div>
+</div>
+<script>
+const KULLANICI='cisey',DEPO='local-radar-output';
+// API'ye ulaşılamazsa gösterilecek yedek liste
+const YEDEK=['Akkent-Karatas.html','Nizip.html'];
+const list=document.getElementById('list');
+
+const dosyaAdi=n=>decodeURIComponent(n).replace(/\.html?$/i,'').replace(/[-_]+/g,' ');
+
+// Sayfanın <title> etiketini, dosyanın tamamını indirmeden ilk birkaç KB'tan okur
+async function baslik(dosya){
+  try{
+    const r=await fetch(encodeURIComponent(dosya));
+    if(!r.ok||!r.body)return null;
+    const rd=r.body.getReader(),dc=new TextDecoder();let t='';
+    while(t.length<8000){
+      const {done,value}=await rd.read();if(done)break;
+      t+=dc.decode(value,{stream:true});
+      const m=t.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      if(m){rd.cancel();return m[1].trim()||null}
+    }
+    rd.cancel();return null;
+  }catch(e){return null}
+}
+
+async function ciz(dosyalar){
+  list.textContent='';
+  if(!dosyalar.length){list.innerHTML='<p class="none">Henüz çıktı yok.</p>';return}
+  const satirlar=dosyalar.map(f=>{
+    const a=document.createElement('a');a.className='k';a.href=encodeURIComponent(f);
+    a.textContent=dosyaAdi(f);
+    const s=document.createElement('small');s.textContent=f;a.appendChild(s);
+    list.appendChild(a);return a;
+  });
+  // başlıkları arka planda güncelle
+  satirlar.forEach(async(a,i)=>{
+    const b=await baslik(dosyalar[i]);
+    if(b){a.firstChild.nodeValue=b}
+  });
+}
+
+fetch('https://api.github.com/repos/'+KULLANICI+'/'+DEPO+'/contents/')
+  .then(r=>{if(!r.ok)throw 0;return r.json()})
+  .then(d=>{
+    const f=d.filter(x=>x.type==='file'&&/\.html?$/i.test(x.name)&&x.name.toLowerCase()!=='index.html')
+             .map(x=>x.name).sort((a,b)=>a.localeCompare(b,'tr'));
+    ciz(f);
+  })
+  .catch(()=>ciz(YEDEK));
+</script></body></html>
