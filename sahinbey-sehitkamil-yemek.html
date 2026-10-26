@@ -59,10 +59,7 @@ a.go{display:inline-block;margin-top:8px;font-size:13px;font-weight:600;color:va
 <div style="font-size: 13px; font-weight: 600; color: var(--primary); margin-bottom: 16px;">📅 25.10.2026 · Sade görünüm</div>
 
 <div class="f-row" style="margin-bottom: 8px;">
-  <button class="ikon" style="margin-left:0" onclick="rotaAc()">Rotada Aç</button>
-  <button class="ikon" onclick="wpListe()">WP'ye Gönder</button>
-  <button class="ikon" onclick="konumAl(draw)">📍 Konum Bul</button>
-  <button class="ikon" onclick="favorileriTemizle()" style="color:#c00">🗑️ Sıfırla</button>
+  <button class="ikon" style="margin-left:0;color:#c00" onclick="favorileriTemizle()">🗑️ Sıfırla</button>
 </div>
 
 <select id="ic" aria-label="İlçe"></select>
@@ -202,10 +199,17 @@ function wpListe(){
 }
 
 function favorileriTemizle(){
-  if(!confirm('Tüm favoriler silinecek. Emin misin?'))return;
-  localStorage.removeItem('gezi_durum');
-  durum={};
-  draw();
+  // Süzgeçleri ve seçili mahalleyi sıfırla
+  ic.value='';mq.value='';mahalleListe();mh.value='';
+  mp.value='';my.value='';q.value='';
+  sirala.value='skor';gs.value='';ana='';alt='';
+  draw();scrollTo(0,0);
+  // Favori/not varsa ayrıca sor
+  if(Object.keys(durum).length&&confirm('Favoriler ve notlar da silinsin mi?')){
+    localStorage.removeItem('gezi_durum');
+    durum={};
+    draw();
+  }
 }
 
 list.addEventListener('click',e=>{
