@@ -241,13 +241,27 @@ p.desc { color: var(--text-muted); font-size: 14.5px; margin-top: 6px; line-heig
       "Zonguldak": "Alaplı,Çaycuma,Devrek,Ereğli,Gökçebey,Kilimli,Kozlu,Merkez"
     };
 
+    // ⚠️ TÜRKÇE KARAKTER TEMİZLEYİCİ (s, ş; i, ı; o, ö vb. ayrımını ortadan kaldırır)
+    function normalize(str) {
+      return str
+        .toLocaleLowerCase('tr')
+        .replace(/ı/g, 'i')
+        .replace(/ş/g, 's')
+        .replace(/ğ/g, 'g')
+        .replace(/ü/g, 'u')
+        .replace(/ö/g, 'o')
+        .replace(/ç/g, 'c')
+        .replace(/İ/g, 'i')
+        .replace(/[^a-z0-9]/g, ''); // Boşlukları ve noktalama işaretlerini sil
+    }
+
     // Veriyi hızlı arama yapabilmek için düz bir sözlüğe (İlçe -> İl) çeviriyoruz
     const ilceIlSozlugu = {};
     for (const [il, ilcelerStr] of Object.entries(ilIlceData)) {
       const ilceler = ilcelerStr.split(',');
       ilceler.forEach(ilce => {
-        // Türkçe karakter uyumu için normalize edip küçük harfe çeviriyoruz
-        ilceIlSozlugu[ilce.trim().toLocaleLowerCase('tr')] = il;
+        // Hem orijinal ismi hem de normalize edilmiş halini sözlüğe ekle
+        ilceIlSozlugu[normalize(ilce)] = il;
       });
     }
 
@@ -257,19 +271,21 @@ p.desc { color: var(--text-muted); font-size: 14.5px; margin-top: 6px; line-heig
       const isHersey = ad.toLowerCase().includes('hersey') || ad.toLowerCase().includes('her-sey');
 
       let bolgeStr = ad.replace(/-(yemek|hersey|her-sey)$/i, '');
-      let temizIlce = bolgeStr.replace(/[-_]+/g, ' ').trim();
       
       let il = 'Diğer';
-      const kelimeler = temizIlce.toLocaleLowerCase('tr').split(' ');
+      const kelimeler = bolgeStr.split(/[-_ ]+/); // Tire, alt çizgi ve boşluklara göre parçala
       
-      // Dosya adındaki kelimeleri sözlükte ara (Örn: sahinbey sehitkamil -> Şahinbey bulunur)
+      // Dosya adındaki her bir kelimeyi sözlükte ara (Örn: sahinbey -> Şahinbey)
       for (let k of kelimeler) {
-        if (ilceIlSozlugu[k]) {
-          il = ilceIlSozlugu[k];
+        if (!k) continue;
+        const normK = normalize(k);
+        if (ilceIlSozlugu[normK]) {
+          il = ilceIlSozlugu[normK];
           break;
         }
       }
 
+      let temizIlce = bolgeStr.replace(/[-_]+/g, ' ').trim();
       let bolgeBaslik = temizIlce.replace(/\b\p{L}/gu, c => c.toLocaleUpperCase('tr'));
       let tip = isYemek ? 'Yemek & Mekan' : (isHersey ? 'Genel Rehber' : 'Rehber');
       let icon = isYemek ? '🍽️' : (isHersey ? '🧭' : '📍');
