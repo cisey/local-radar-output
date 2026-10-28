@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Local Radar · Keşif Rehberi</title>
 
-<!-- Font -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -58,7 +57,7 @@ body {
 .back-btn:active { transform: scale(0.96); background: rgba(255, 255, 255, 0.1); }
 
 /* Başlık Alanı */
-.header { margin-bottom: 24px; }
+.header { margin-bottom: 32px; }
 .radar-icon {
   display: inline-flex; align-items: center; justify-content: center;
   width: 52px; height: 52px; border-radius: 16px;
@@ -69,6 +68,19 @@ body {
 }
 h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.2; }
 p.desc { color: var(--text-muted); font-size: 14.5px; margin-top: 6px; line-height: 1.5; }
+
+/* İl Grupları */
+.il-grup { margin-bottom: 32px; }
+.il-baslik {
+  font-size: 14px; font-weight: 800; color: var(--accent);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 14px; padding-left: 6px;
+  display: flex; align-items: center; gap: 12px;
+}
+.il-baslik::after {
+  content: ""; flex-grow: 1; height: 1px;
+  background: linear-gradient(to right, var(--card-border), transparent);
+}
 
 /* Liste Kartları */
 .list { display: flex; flex-direction: column; gap: 12px; }
@@ -118,26 +130,22 @@ p.desc { color: var(--text-muted); font-size: 14.5px; margin-top: 6px; line-heig
 }
 .card:hover .card-arrow { color: var(--accent); transform: translateX(3px); }
 
-/* Yükleniyor / Boş Durumu */
 .state-msg { text-align: center; color: var(--text-muted); padding: 40px 0; font-size: 14px; }
 </style>
 </head>
 <body>
   <div class="container">
-    <!-- Geri Butonu -->
     <div class="top-nav">
       <a href="/" class="back-btn">← Ana sayfa</a>
     </div>
 
-    <!-- Başlık -->
     <div class="header">
       <div class="radar-icon">📡</div>
       <h1>Local Radar</h1>
       <p class="desc">Bölge ve mekan rehberleri. İncelemek istediğiniz rehbere dokunun.</p>
     </div>
 
-    <!-- Liste -->
-    <div id="rehberListesi" class="list">
+    <div id="rehberListesi">
       <div class="state-msg">Rehberler taranıyor…</div>
     </div>
   </div>
@@ -148,22 +156,126 @@ p.desc { color: var(--text-muted); font-size: 14.5px; margin-top: 6px; line-heig
     const container = document.getElementById('rehberListesi');
     let tumRehberler = [];
 
-    // Dosya adından temiz bilgi çıkarma
+    // VERDİĞİN 81 İLLİK DEV VERİ TABANI
+    const ilIlceData = {
+      "Adana": "Aladağ,Ceyhan,Çukurova,Feke,İmamoğlu,Karaisalı,Karataş,Kozan,Pozantı,Saimbeyli,Sarıçam,Seyhan,Tufanbeyli,Yumurtalık,Yüreğir",
+      "Adıyaman": "Besni,Çelikhan,Gerger,Gölbaşı,Kahta,Merkez,Samsat,Sincik,Tut",
+      "Afyonkarahisar": "Başmakçı,Bayat,Bolvadin,Çay,Çobanlar,Dazkırı,Dinar,Emirdağ,Evciler,Hocalar,İhsaniye,İscehisar,Kızılören,Merkez,Sandıklı,Sinanpaşa,Sultandağı,Şuhut",
+      "Ağrı": "Diyadin,Doğubayazıt,Eleşkirt,Hamur,Merkez,Patnos,Taşlıçay,Tutak",
+      "Aksaray": "Ağaçören,Eskil,Gülağaç,Güzelyurt,Merkez,Ortaköy,Sarıyahşi,Sultanhanı",
+      "Amasya": "Göynücek,Gümüşhacıköy,Hamamözü,Merkez,Merzifon,Suluova,Taşova",
+      "Ankara": "Akyurt,Altındağ,Ayaş,Bala,Beypazarı,Çamlıdere,Çankaya,Çubuk,Elmadağ,Etimesgut,Evren,Gölbaşı,Güdül,Haymana,Kahramankazan,Kalecik,Keçiören,Kızılcahamam,Mamak,Nallıhan,Polatlı,Pursaklar,Sincan,Şereflikoçhisar,Yenimahalle",
+      "Antalya": "Akseki,Aksu,Alanya,Demre,Döşemealtı,Elmalı,Finike,Gazipaşa,Gündoğmuş,İbradı,Kaş,Kemer,Kepez,Konyaaltı,Korkuteli,Kumluca,Manavgat,Muratpaşa,Serik",
+      "Ardahan": "Çıldır,Damal,Göle,Hanak,Merkez,Posof",
+      "Artvin": "Ardanuç,Arhavi,Borçka,Hopa,Kemalpaşa,Merkez,Murgul,Şavşat,Yusufeli",
+      "Aydın": "Bozdoğan,Buharkent,Çine,Didim,Efeler,Germencik,İncirliova,Karacasu,Karpuzlu,Koçarlı,Köşk,Kuşadası,Kuyucak,Nazilli,Söke,Sultanhisar,Yenipazar",
+      "Balıkesir": "Altıeylül,Ayvalık,Balya,Bandırma,Bigadiç,Burhaniye,Dursunbey,Edremit,Erdek,Gömeç,Gönen,Havran,İvrindi,Karesi,Kepsut,Manyas,Marmara,Savaştepe,Sındırgı,Susurluk",
+      "Bartın": "Amasra,Kurucaşile,Merkez,Ulus",
+      "Batman": "Beşiri,Gercüş,Hasankeyf,Kozluk,Merkez,Sason",
+      "Bayburt": "Aydıntepe,Demirözü,Merkez",
+      "Bilecik": "Bozüyük,Gölpazarı,İnhisar,Merkez,Osmaneli,Pazaryeri,Söğüt,Yenipazar",
+      "Bingöl": "Adaklı,Genç,Karlıova,Kiğı,Merkez,Solhan,Yayladere,Yedisu",
+      "Bitlis": "Adilcevaz,Ahlat,Güroymak,Hizan,Merkez,Mutki,Tatvan",
+      "Bolu": "Dörtdivan,Gerede,Göynük,Kıbrıscık,Mengen,Merkez,Mudurnu,Seben,Yeniçağa",
+      "Burdur": "Ağlasun,Altınyayla,Bucak,Çavdır,Çeltikçi,Gölhisar,Karamanlı,Kemer,Merkez,Tefenni,Yeşilova",
+      "Bursa": "Büyükorhan,Gemlik,Gürsu,Harmancık,İnegöl,İznik,Karacabey,Keles,Kestel,Mudanya,Mustafakemalpaşa,Nilüfer,Orhaneli,Orhangazi,Osmangazi,Yenişehir,Yıldırım",
+      "Çanakkale": "Ayvacık,Bayramiç,Biga,Bozcaada,Çan,Eceabat,Ezine,Gelibolu,Gökçeada,Lapseki,Merkez,Yenice",
+      "Çankırı": "Atkaracalar,Bayramören,Çerkeş,Eldivan,Ilgaz,Kızılırmak,Korgun,Kurşunlu,Merkez,Orta,Şabanözü,Yapraklı",
+      "Çorum": "Alaca,Bayat,Boğazkale,Dodurga,İskilip,Kargı,Laçin,Mecitözü,Merkez,Oğuzlar,Ortaköy,Osmancık,Sungurlu,Uğurludağ",
+      "Denizli": "Acıpayam,Babadağ,Baklan,Bekilli,Beyağaç,Bozkurt,Buldan,Çal,Çameli,Çardak,Çivril,Güney,Honaz,Kale,Merkezefendi,Pamukkale,Sarayköy,Serinhisar,Tavas",
+      "Diyarbakır": "Bağlar,Bismil,Çermik,Çınar,Çüngüş,Dicle,Eğil,Ergani,Hani,Hazro,Kayapınar,Kocaköy,Kulp,Lice,Silvan,Sur,Yenişehir",
+      "Düzce": "Akçakoca,Cumayeri,Çilimli,Gölyaka,Gümüşova,Kaynaşlı,Merkez,Yığılca",
+      "Edirne": "Enez,Havsa,İpsala,Keşan,Lalapaşa,Meriç,Merkez,Süloğlu,Uzunköprü",
+      "Elazığ": "Ağın,Alacakaya,Arıcak,Baskil,Harput,Karakoçan,Keban,Kovancılar,Maden,Merkez,Palu,Sivrice",
+      "Erzincan": "Çayırlı,İliç,Kemah,Kemaliye,Merkez,Otlukbeli,Refahiye,Tercan,Üzümlü",
+      "Erzurum": "Aşkale,Aziziye,Çat,Hınıs,Horasan,İspir,Karaçoban,Karayazı,Köprüköy,Narman,Oltu,Olur,Palandöken,Pasinler,Pazaryolu,Şenkaya,Tekman,Tortum,Uzundere,Yakutiye",
+      "Eskişehir": "Alpu,Beylikova,Çifteler,Günyüzü,Han,İnönü,Mahmudiye,Mihalgazi,Mihalıççık,Odunpazarı,Sarıcakaya,Seyitgazi,Sivrihisar,Tepebaşı",
+      "Gaziantep": "Araban,İslahiye,Karkamış,Nizip,Nurdağı,Oğuzeli,Şahinbey,Şehitkamil,Yavuzeli",
+      "Giresun": "Alucra,Bulancak,Çamoluk,Çanakçı,Dereli,Doğankent,Espiye,Eynesil,Görele,Güce,Keşap,Merkez,Piraziz,Şebinkarahisar,Tirebolu,Yağlıdere",
+      "Gümüşhane": "Kelkit,Köse,Kürtün,Merkez,Şiran,Torul",
+      "Hakkari": "Çukurca,Derecik,Merkez,Şemdinli,Yüksekova",
+      "Hatay": "Altınözü,Antakya,Arsuz,Belen,Defne,Dörtyol,Erzin,Hassa,İskenderun,Kırıkhan,Kumlu,Payas,Reyhanlı,Samandağ,Yayladağı",
+      "Iğdır": "Aralık,Karakoyunlu,Merkez,Tuzluca",
+      "Isparta": "Aksu,Atabey,Eğirdir,Gelendost,Gönen,Keçiborlu,Merkez,Senirkent,Sütçüler,Şarkikaraağaç,Uluborlu,Yalvaç,Yenişarbademli",
+      "İstanbul": "Adalar,Arnavutköy,Ataşehir,Avcılar,Bağcılar,Bahçelievler,Bakırköy,Başakşehir,Bayrampaşa,Beşiktaş,Beykoz,Beylikdüzü,Beyoğlu,Büyükçekmece,Çatalca,Çekmeköy,Esenler,Esenyurt,Eyüpsultan,Fatih,Gaziosmanpaşa,Güngören,Kadıköy,Kağıthane,Kartal,Küçükçekmece,Maltepe,Pendik,Sancaktepe,Sarıyer,Silivri,Sultanbeyli,Sultangazi,Şile,Şişli,Tuzla,Ümraniye,Üsküdar,Zeytinburnu",
+      "İzmir": "Aliağa,Balçova,Bayındır,Bayraklı,Bergama,Beydağ,Bornova,Buca,Çeşme,Çiğli,Dikili,Foça,Gaziemir,Güzelbahçe,Karabağlar,Karaburun,Karşıyaka,Kemalpaşa,Kınık,Kiraz,Konak,Menderes,Menemen,Narlıdere,Ödemiş,Seferihisar,Selçuk,Tire,Torbalı,Urla",
+      "Kahramanmaraş": "Afşin,Andırın,Çağlayancerit,Dulkadiroğlu,Ekinözü,Elbistan,Göksun,Nurhak,Onikişubat,Pazarcık,Türkoğlu",
+      "Karabük": "Eflani,Eskipazar,Merkez,Ovacık,Safranbolu,Yenice",
+      "Karaman": "Ayrancı,Başyayla,Ermenek,Kazımkarabekir,Merkez,Sarıveliler",
+      "Kars": "Akyaka,Arpaçay,Digor,Kağızman,Merkez,Sarıkamış,Selim,Susuz",
+      "Kastamonu": "Abana,Ağlı,Araç,Azdavay,Bozkurt,Cide,Çatalzeytin,Daday,Devrekani,Doğanyurt,Hanönü,İhsangazi,İnebolu,Küre,Merkez,Pınarbaşı,Seydiler,Şenpazar,Taşköprü,Tosya",
+      "Kayseri": "Akkışla,Bünyan,Develi,Felahiye,Hacılar,İncesu,Kocasinan,Melikgazi,Özvatan,Pınarbaşı,Sarıoğlan,Sarız,Talas,Tomarza,Yahyalı,Yeşilhisar",
+      "Kilis": "Elbeyli,Merkez,Musabeyli,Polateli",
+      "Kırıkkale": "Bahşılı,Balışeyh,Çelebi,Delice,Karakeçili,Keskin,Merkez,Sulakyurt,Yahşihan",
+      "Kırklareli": "Babaeski,Demirköy,Kofçaz,Lüleburgaz,Merkez,Pehlivanköy,Pınarhisar,Vize",
+      "Kırşehir": "Akçakent,Akpınar,Boztepe,Çiçekdağı,Kaman,Merkez,Mucur",
+      "Kocaeli": "Başiskele,Çayırova,Darıca,Derince,Dilovası,Gebze,Gölcük,İzmit,Kandıra,Karamürsel,Kartepe,Körfez",
+      "Konya": "Ahırlı,Akören,Akşehir,Altınekin,Beyşehir,Bozkır,Cihanbeyli,Çeltik,Çumra,Derbent,Derebucak,Doğanhisar,Emirgazi,Ereğli,Güneysınır,Hadim,Halkapınar,Hüyük,Ilgın,Kadınhanı,Karapınar,Karatay,Kulu,Meram,Sarayönü,Selçuklu,Seydişehir,Taşkent,Tuzlukçu,Yalıhüyük,Yunak",
+      "Kütahya": "Altıntaş,Aslanapa,Çavdarhisar,Domaniç,Dumlupınar,Emet,Gediz,Hisarcık,Merkez,Pazarlar,Simav,Şaphane,Tavşanlı",
+      "Malatya": "Akçadağ,Arapgir,Arguvan,Battalgazi,Darende,Doğanşehir,Doğanyol,Hekimhan,Kale,Kuluncak,Pütürge,Yazıhan,Yeşilyurt",
+      "Manisa": "Ahmetli,Akhisar,Alaşehir,Demirci,Gölmarmara,Gördes,Kırkağaç,Köprübaşı,Kula,Salihli,Sarıgöl,Saruhanlı,Selendi,Soma,Şehzadeler,Turgutlu,Yunusemre",
+      "Mardin": "Artuklu,Dargeçit,Derik,Kızıltepe,Mazıdağı,Midyat,Nusaybin,Ömerli,Savur,Yeşilli",
+      "Mersin": "Akdeniz,Anamur,Aydıncık,Bozyazı,Çamlıyayla,Erdemli,Gülnar,Mezitli,Mut,Silifke,Tarsus,Toroslar,Yenişehir",
+      "Muğla": "Bodrum,Dalaman,Datça,Fethiye,Kavaklıdere,Köyceğiz,Marmaris,Menteşe,Milas,Ortaca,Seydikemer,Ula,Yatağan",
+      "Muş": "Bulanık,Hasköy,Korkut,Malazgirt,Merkez,Varto",
+      "Nevşehir": "Acıgöl,Avanos,Derinkuyu,Gülşehir,Hacıbektaş,Kozaklı,Merkez,Ürgüp",
+      "Niğde": "Altunhisar,Bor,Çamardı,Çiftlik,Merkez,Ulukışla",
+      "Ordu": "Akkuş,Altınordu,Aybastı,Çamaş,Çatalpınar,Çaybaşı,Fatsa,Gölköy,Gülyalı,Gürgentepe,İkizce,Kabadüz,Kabataş,Korgan,Kumru,Mesudiye,Perşembe,Ulubey,Ünye",
+      "Osmaniye": "Bahçe,Düziçi,Hasanbeyli,Kadirli,Merkez,Sumbas,Toprakkale",
+      "Rize": "Ardeşen,Çamlıhemşin,Çayeli,Derepazarı,Fındıklı,Güneysu,Hemşin,İkizdere,İyidere,Kalkandere,Merkez,Pazar",
+      "Sakarya": "Adapazarı,Akyazı,Arifiye,Erenler,Ferizli,Geyve,Hendek,Karapürçek,Karasu,Kaynarca,Kocaali,Pamukova,Sapanca,Serdivan,Söğütlü,Taraklı",
+      "Samsun": "19 Mayıs,Alaçam,Asarcık,Atakum,Ayvacık,Bafra,Canik,Çarşamba,Havza,İlkadım,Kavak,Ladik,Salıpazarı,Tekkeköy,Terme,Vezirköprü,Yakakent",
+      "Siirt": "Baykan,Eruh,Kurtalan,Merkez,Pervari,Şirvan,Tillo",
+      "Sinop": "Ayancık,Boyabat,Dikmen,Durağan,Erfelek,Gerze,Merkez,Saraydüzü,Türkeli",
+      "Sivas": "Akıncılar,Altınyayla,Divriği,Doğanşar,Gemerek,Gölova,Gürün,Hafik,İmranlı,Kangal,Koyulhisar,Merkez,Suşehri,Şarkışla,Ulaş,Yıldızeli,Zara",
+      "Şanlıurfa": "Akçakale,Birecik,Bozova,Ceylanpınar,Eyyübiye,Halfeti,Haliliye,Harran,Hilvan,Karaköprü,Siverek,Suruç,Viranşehir",
+      "Şırnak": "Beytüşşebap,Cizre,Güçlükonak,İdil,Merkez,Silopi,Uludere",
+      "Tekirdağ": "Çerkezköy,Çorlu,Ergene,Hayrabolu,Kapaklı,Malkara,Marmaraereğlisi,Muratlı,Saray,Süleymanpaşa,Şarköy",
+      "Tokat": "Almus,Artova,Başçiftlik,Erbaa,Merkez,Niksar,Pazar,Reşadiye,Sulusaray,Turhal,Yeşilyurt,Zile",
+      "Trabzon": "Akçaabat,Araklı,Arsin,Beşikdüzü,Çarşıbaşı,Çaykara,Dernekpazarı,Düzköy,Hayrat,Köprübaşı,Maçka,Of,Ortahisar,Sürmene,Şalpazarı,Tonya,Vakfıkebir,Yomra",
+      "Tunceli": "Çemişgezek,Hozat,Mazgirt,Merkez,Nazımiye,Ovacık,Pertek,Pülümür",
+      "Uşak": "Banaz,Eşme,Karahallı,Merkez,Sivaslı,Ulubey",
+      "Van": "Bahçesaray,Başkale,Çaldıran,Çatak,Edremit,Erciş,Gevaş,Gürpınar,İpekyolu,Muradiye,Özalp,Saray,Tuşba",
+      "Yalova": "Altınova,Armutlu,Çınarcık,Çiftlikköy,Merkez,Termal",
+      "Yozgat": "Akdağmadeni,Aydıncık,Boğazlıyan,Çandır,Çayıralan,Çekerek,Kadışehri,Merkez,Saraykent,Sarıkaya,Sorgun,Şefaatli,Yenifakılı,Yerköy",
+      "Zonguldak": "Alaplı,Çaycuma,Devrek,Ereğli,Gökçebey,Kilimli,Kozlu,Merkez"
+    };
+
+    // Veriyi hızlı arama yapabilmek için düz bir sözlüğe (İlçe -> İl) çeviriyoruz
+    const ilceIlSozlugu = {};
+    for (const [il, ilcelerStr] of Object.entries(ilIlceData)) {
+      const ilceler = ilcelerStr.split(',');
+      ilceler.forEach(ilce => {
+        // Türkçe karakter uyumu için normalize edip küçük harfe çeviriyoruz
+        ilceIlSozlugu[ilce.trim().toLocaleLowerCase('tr')] = il;
+      });
+    }
+
     function dosyaAnaliz(dosyaAdi) {
       const ad = dosyaAdi.replace('.html', '');
       const isYemek = ad.toLowerCase().includes('yemek');
       const isHersey = ad.toLowerCase().includes('hersey') || ad.toLowerCase().includes('her-sey');
 
-      let bolge = ad
-        .replace(/-(yemek|hersey|her-sey)$/i, '')
-        .replace(/[-_]+/g, ' ')
-        .replace(/\b\p{L}/gu, c => c.toLocaleUpperCase('tr'));
+      let bolgeStr = ad.replace(/-(yemek|hersey|her-sey)$/i, '');
+      let temizIlce = bolgeStr.replace(/[-_]+/g, ' ').trim();
+      
+      let il = 'Diğer';
+      const kelimeler = temizIlce.toLocaleLowerCase('tr').split(' ');
+      
+      // Dosya adındaki kelimeleri sözlükte ara (Örn: sahinbey sehitkamil -> Şahinbey bulunur)
+      for (let k of kelimeler) {
+        if (ilceIlSozlugu[k]) {
+          il = ilceIlSozlugu[k];
+          break;
+        }
+      }
 
+      let bolgeBaslik = temizIlce.replace(/\b\p{L}/gu, c => c.toLocaleUpperCase('tr'));
       let tip = isYemek ? 'Yemek & Mekan' : (isHersey ? 'Genel Rehber' : 'Rehber');
       let icon = isYemek ? '🍽️' : (isHersey ? '🧭' : '📍');
       let badgeClass = isYemek ? 'badge-food' : 'badge-all';
 
-      return { baslik: bolge, altBaslik: tip, icon: icon, badgeClass: badgeClass, dosya: dosyaAdi };
+      return { baslik: bolgeBaslik, il: il, altBaslik: tip, icon: icon, badgeClass: badgeClass, dosya: dosyaAdi };
     }
 
     function kartCiz(liste) {
@@ -172,42 +284,77 @@ p.desc { color: var(--text-muted); font-size: 14.5px; margin-top: 6px; line-heig
         container.innerHTML = '<div class="state-msg">Rehber bulunamadı.</div>';
         return;
       }
-      liste.forEach(item => {
-        const info = dosyaAnaliz(item.name || item);
-        const url = item.name ? item.name : item;
-        const a = document.createElement('a');
-        a.className = 'card';
-        a.href = url;
-        a.innerHTML = `
-          <div class="card-icon">${info.icon}</div>
-          <div class="card-info">
-            <div class="card-title">${info.baslik}</div>
-            <div class="card-meta">
-              <span class="badge ${info.badgeClass}">${info.altBaslik}</span>
-              <span class="card-filename">${info.dosya}</span>
+
+      const analizliListe = liste.map(item => dosyaAnaliz(item.name || item));
+      const gruplar = {};
+      
+      analizliListe.forEach(info => {
+        if (!gruplar[info.il]) gruplar[info.il] = [];
+        gruplar[info.il].push(info);
+      });
+
+      // İlleri alfabetik sırala ("Diğer" en sonda)
+      const siraliIller = Object.keys(gruplar).sort((a, b) => {
+        if (a === 'Diğer') return 1;
+        if (b === 'Diğer') return -1;
+        return a.localeCompare(b, 'tr');
+      });
+
+      siraliIller.forEach(il => {
+        const ilDiv = document.createElement('div');
+        ilDiv.className = 'il-grup';
+
+        const ilBaslik = document.createElement('div');
+        ilBaslik.className = 'il-baslik';
+        ilBaslik.textContent = il;
+        ilDiv.appendChild(ilBaslik);
+
+        const listeDiv = document.createElement('div');
+        listeDiv.className = 'list';
+
+        // İlçeleri kendi içinde alfabetik sırala
+        const ilceler = gruplar[il].sort((a, b) => a.baslik.localeCompare(b.baslik, 'tr'));
+
+        ilceler.forEach(info => {
+          const a = document.createElement('a');
+          a.className = 'card';
+          a.href = info.dosya;
+          a.innerHTML = `
+            <div class="card-icon">${info.icon}</div>
+            <div class="card-info">
+              <div class="card-title">${info.baslik}</div>
+              <div class="card-meta">
+                <span class="badge ${info.badgeClass}">${info.altBaslik}</span>
+                <span class="card-filename">${info.dosya}</span>
+              </div>
             </div>
-          </div>
-          <div class="card-arrow">→</div>
-        `;
-        container.appendChild(a);
+            <div class="card-arrow">→</div>
+          `;
+          listeDiv.appendChild(a);
+        });
+
+        ilDiv.appendChild(listeDiv);
+        container.appendChild(ilDiv);
       });
     }
 
-    // GitHub API ile repodaki HTML dosyalarını otomatik çekme
     fetch(`https://api.github.com/repos/${KULLANICI}/${REPO}/contents`)
       .then(r => { if (!r.ok) throw 0; return r.json(); })
       .then(dosyalar => {
-        // Sadece index.html dışındaki .html dosyalarını al
         tumRehberler = dosyalar.filter(f => f.name.endsWith('.html') && f.name !== 'index.html');
         kartCiz(tumRehberler);
       })
       .catch(() => {
-        // API limiti veya offline durum için yedek liste
+        // Test için yedek liste
         tumRehberler = [
           { name: 'Nizip-hersey.html' },
           { name: 'Nizip-yemek.html' },
           { name: 'oguzeli-yemek.html' },
-          { name: 'sahinbey-sehitkamil-yemek.html' }
+          { name: 'sahinbey-sehitkamil-yemek.html' },
+          { name: 'birecik-yemek.html' },
+          { name: 'karkamis-yemek.html' },
+          { name: 'antakya-yemek.html' },
+          { name: 'iskenderun-hersey.html' }
         ];
         kartCiz(tumRehberler);
       });
