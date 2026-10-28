@@ -8,8 +8,6 @@ Local Radar programının ürettiği rehber sayfalarını (HTML) yayınlar. Tele
 |---|---|
 | Ana sayfa (projeler) | https://cisey.github.io/ |
 | Rehber listesi | https://cisey.github.io/local-radar-output/ |
-| Akkent + Karataş | https://cisey.github.io/local-radar-output/Akkent-Karatas.html |
-| Nizip | https://cisey.github.io/local-radar-output/Nizip.html |
 
 ## Hangi dosya nerede
 
