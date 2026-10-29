@@ -57,7 +57,7 @@ body {
 .back-btn:active { transform: scale(0.96); background: rgba(255, 255, 255, 0.1); }
 
 /* Başlık Alanı */
-.header { margin-bottom: 32px; }
+.header { margin-bottom: 24px; }
 .radar-icon {
   display: inline-flex; align-items: center; justify-content: center;
   width: 52px; height: 52px; border-radius: 16px;
@@ -69,12 +69,33 @@ body {
 h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.2; }
 p.desc { color: var(--text-muted); font-size: 14.5px; margin-top: 6px; line-height: 1.5; }
 
+/* Arama Kutusu */
+.search-wrap { margin-bottom: 20px; }
+.search-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-size: 14.5px;
+  color: #fff;
+  outline: none;
+  backdrop-filter: blur(10px);
+  transition: all 0.2s;
+}
+.search-input:focus {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.search-input::placeholder { color: #64748b; }
+
 /* İl Grupları */
-.il-grup { margin-bottom: 32px; }
+.il-grup { margin-bottom: 28px; }
 .il-baslik {
-  font-size: 14px; font-weight: 800; color: var(--accent);
+  font-size: 13px; font-weight: 800; color: var(--accent);
   text-transform: uppercase; letter-spacing: 0.08em;
-  margin-bottom: 14px; padding-left: 6px;
+  margin-bottom: 12px; padding-left: 4px;
   display: flex; align-items: center; gap: 12px;
 }
 .il-baslik::after {
@@ -145,6 +166,11 @@ p.desc { color: var(--text-muted); font-size: 14.5px; margin-top: 6px; line-heig
       <p class="desc">Bölge ve mekan rehberleri. İncelemek istediğiniz rehbere dokunun.</p>
     </div>
 
+    <!-- Arama Çubuğu Eklendi -->
+    <div class="search-wrap">
+      <input type="text" id="searchInput" class="search-input" placeholder="İl, ilçe veya rehber ara...">
+    </div>
+
     <div id="rehberListesi">
       <div class="state-msg">Rehberler taranıyor…</div>
     </div>
@@ -154,9 +180,9 @@ p.desc { color: var(--text-muted); font-size: 14.5px; margin-top: 6px; line-heig
     const KULLANICI = 'cisey';
     const REPO = 'local-radar-output';
     const container = document.getElementById('rehberListesi');
+    const searchInput = document.getElementById('searchInput');
     let tumRehberler = [];
 
-    // VERDİĞİN 81 İLLİK DEV VERİ TABANI
     const ilIlceData = {
       "Adana": "Aladağ,Ceyhan,Çukurova,Feke,İmamoğlu,Karaisalı,Karataş,Kozan,Pozantı,Saimbeyli,Sarıçam,Seyhan,Tufanbeyli,Yumurtalık,Yüreğir",
       "Adıyaman": "Besni,Çelikhan,Gerger,Gölbaşı,Kahta,Merkez,Samsat,Sincik,Tut",
@@ -241,7 +267,6 @@ p.desc { color: var(--text-muted); font-size: 14.5px; margin-top: 6px; line-heig
       "Zonguldak": "Alaplı,Çaycuma,Devrek,Ereğli,Gökçebey,Kilimli,Kozlu,Merkez"
     };
 
-    // TÜRKÇE KARAKTER TEMİZLEYİCİ
     function normalize(str) {
       return str
         .toLocaleLowerCase('tr')
@@ -250,15 +275,12 @@ p.desc { color: var(--text-muted); font-size: 14.5px; margin-top: 6px; line-heig
         .replace(/İ/g, 'i').replace(/[^a-z0-9]/g, '');
     }
 
-    // Veriyi hızlı arama yapabilmek için düz bir sözlüğe (İlçe -> İl) çeviriyoruz
     const ilceIlSozlugu = {};
-    const ilSozlugu = new Set(); // İl isimlerini tutacağımız set
+    const ilSozlugu = new Set();
 
     for (const [il, ilcelerStr] of Object.entries(ilIlceData)) {
-      ilSozlugu.add(normalize(il)); // İl ismini de kaydediyoruz (örn: kilis)
-      
-      const ilceler = ilcelerStr.split(',');
-      ilceler.forEach(ilce => {
+      ilSozlugu.add(normalize(il));
+      ilcelerStr.split(',').forEach(ilce => {
         ilceIlSozlugu[normalize(ilce)] = il;
       });
     }
@@ -269,30 +291,24 @@ p.desc { color: var(--text-muted); font-size: 14.5px; margin-top: 6px; line-heig
       const isHersey = ad.toLowerCase().includes('hersey') || ad.toLowerCase().includes('her-sey');
 
       let bolgeStr = ad.replace(/-(yemek|hersey|her-sey)$/i, '');
-      
       let il = 'Diğer';
-      const kelimeler = bolgeStr.split(/[-_ ]+/); // Tire, alt çizgi ve boşluklara göre parçala
+      const kelimeler = bolgeStr.split(/[-_ ]+/);
       
       for (let i = 0; i < kelimeler.length; i++) {
         let k = kelimeler[i];
         if (!k) continue;
         const normK = normalize(k);
 
-        // KURAL 1: Dosya ismi doğrudan bir İL ismiyse (örn: kilis)
         if (ilSozlugu.has(normK)) {
-          il = k.replace(/\b\p{L}/gu, c => c.toLocaleUpperCase('tr')); // Baş harfi büyüt
+          il = k.replace(/\b\p{L}/gu, c => c.toLocaleUpperCase('tr'));
           break;
-        }
-        // KURAL 2: Dosya isminde "merkez" geçiyorsa, bir önceki kelime İl'dir (örn: kilis-merkez)
-        else if (normK === 'merkez' && i > 0) {
+        } else if (normK === 'merkez' && i > 0) {
           const oncekiKelime = kelimeler[i - 1];
           if (ilSozlugu.has(normalize(oncekiKelime))) {
             il = oncekiKelime.replace(/\b\p{L}/gu, c => c.toLocaleUpperCase('tr'));
             break;
           }
-        }
-        // KURAL 3: Dosya isminde bir İLÇE geçiyorsa, sözlükten İl'ini bul (örn: karkamis)
-        else if (ilceIlSozlugu[normK]) {
+        } else if (ilceIlSozlugu[normK]) {
           il = ilceIlSozlugu[normK];
           break;
         }
@@ -310,7 +326,7 @@ p.desc { color: var(--text-muted); font-size: 14.5px; margin-top: 6px; line-heig
     function kartCiz(liste) {
       container.innerHTML = '';
       if (!liste.length) {
-        container.innerHTML = '<div class="state-msg">Rehber bulunamadı.</div>';
+        container.innerHTML = '<div class="state-msg">Eşleşen rehber bulunamadı.</div>';
         return;
       }
 
@@ -322,7 +338,6 @@ p.desc { color: var(--text-muted); font-size: 14.5px; margin-top: 6px; line-heig
         gruplar[info.il].push(info);
       });
 
-      // İlleri alfabetik sırala ("Diğer" en sonda)
       const siraliIller = Object.keys(gruplar).sort((a, b) => {
         if (a === 'Diğer') return 1;
         if (b === 'Diğer') return -1;
@@ -341,7 +356,6 @@ p.desc { color: var(--text-muted); font-size: 14.5px; margin-top: 6px; line-heig
         const listeDiv = document.createElement('div');
         listeDiv.className = 'list';
 
-        // İlçeleri kendi içinde alfabetik sırala
         const ilceler = gruplar[il].sort((a, b) => a.baslik.localeCompare(b.baslik, 'tr'));
 
         ilceler.forEach(info => {
@@ -367,6 +381,17 @@ p.desc { color: var(--text-muted); font-size: 14.5px; margin-top: 6px; line-heig
       });
     }
 
+    // Arama fonksiyonu
+    searchInput.addEventListener('input', (e) => {
+      const q = e.target.value.toLocaleLowerCase('tr').trim();
+      const filtrelenmis = tumRehberler.filter(item => {
+        const ad = (item.name || item).toLocaleLowerCase('tr');
+        return ad.includes(q);
+      });
+      kartCiz(filtrelenmis);
+    });
+
+    // GitHub API Çağrısı (Eksik olan parantezler düzeltildi)
     fetch(`https://api.github.com/repos/${KULLANICI}/${REPO}/contents`)
       .then(r => { if (!r.ok) throw 0; return r.json(); })
       .then(dosyalar => {
@@ -374,7 +399,6 @@ p.desc { color: var(--text-muted); font-size: 14.5px; margin-top: 6px; line-heig
         kartCiz(tumRehberler);
       })
       .catch(() => {
-        // Test için yedek liste
         tumRehberler = [
           { name: 'Kilis-yemek.html' },
           { name: 'Kilis-merkez-yemek.html' },
@@ -385,4 +409,4 @@ p.desc { color: var(--text-muted); font-size: 14.5px; margin-top: 6px; line-heig
       });
   </script>
 </body>
-</html>
+</html
